@@ -1,0 +1,3 @@
+[submodule "external/plotly"]
+	path = external/plotly
+	url = https://github.com/plotly/plotly_matlab.git
