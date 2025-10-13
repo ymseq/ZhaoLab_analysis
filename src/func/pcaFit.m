@@ -11,10 +11,12 @@ function cord = pcaFit(cord, params)
 
     cord.units_fr_sum = denoise_matrix * cord.units_fr_sum;
 
-    len_r = numel(cord.trial_types);
-    len_c = numel(cord.behavior_types);
-    for row = 1:len_r
-        for col = 1:len_c
+    len_r = numel(params.ana_tt);
+    len_c = numel(params.ana_bt);
+    for id1 = 1:len_r
+        for id2 = 1:len_c
+            row = params.(params.ana_tt{id1});
+            col = params.(params.ana_bt{id2});
             if isempty(cord.processed_fr{row,col})
                 continue;
             end

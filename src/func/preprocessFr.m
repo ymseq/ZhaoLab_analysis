@@ -1,15 +1,16 @@
 function cord = preprocessFr(cord, params)
 
-    len_r = numel(cord.trial_types);
-    len_c = numel(cord.behavior_types);
+    len_r = numel(params.ana_tt);
+    len_c = numel(params.ana_bt);
 
-    processed_fr = cell(len_r, len_c);
+    processed_fr = cell(numel(cord.trial_types), numel(cord.behavior_types));
 
     num_units_fr_sum = 0;
 
-    for row = 1:len_r
-        for col = 1:len_c
-            
+    for id1 = 1:len_r
+        for id2 = 1:len_c
+            row = params.(params.ana_tt{id1});
+            col = params.(params.ana_bt{id2});
             if isempty(cord.simple_firing{row,col})
                 continue;
             end
@@ -38,8 +39,10 @@ function cord = preprocessFr(cord, params)
     units_fr_sum = zeros(cord.num_neurons, num_units_fr_sum);
 
     sum_idx = 0;
-    for row = 1:len_r
-        for col = 1:len_c
+    for id1 = 1:len_r
+        for id2 = 1:len_c
+            row = params.(params.ana_tt{id1});
+            col = params.(params.ana_bt{id2});
             if isempty(processed_fr{row,col})
                 continue;
             end
@@ -57,8 +60,10 @@ function cord = preprocessFr(cord, params)
 
     units_fr_sum = (units_fr_sum - mean_units) ./ std_units;
 
-    for row = 1:len_r
-        for col = 1:len_c
+    for id1 = 1:len_r
+        for id2 = 1:len_c
+            row = params.(params.ana_tt{id1});
+            col = params.(params.ana_bt{id2});
             if isempty(processed_fr{row,col})
                 continue;
             end

@@ -19,11 +19,8 @@ x_vec = reshape(vecs(:,1),1,[]);
 y_vec = reshape(vecs(:,2),1,[]);
 z_vec = reshape(vecs(:,3),1,[]);
 
-tt = cord.trial_types;
-bt = cord.behavior_types;
-
-len_r = numel(tt);
-len_c = numel(bt);
+len_r = numel(params.ana_tt);
+len_c = numel(params.ana_bt);
 
 colors = jet(len_r * len_c);
 colors = reshape(colors, len_r, len_c, 3);
@@ -34,12 +31,15 @@ xlines = [];
 ylines = [];
 zlines = [];
 
-for row = 1:len_r
-    for col = 1:len_c
-        fr = cord.processed_fr{row,col};
-        if isempty(fr)
+for id1 = 1:numel(params.ana_tt)
+    for id2 = 1:numel(params.ana_bt)
+        row = params.(params.ana_tt{id1});
+        col = params.(params.ana_bt{id2});
+        if isempty(cord.processed_fr{row,col})
             continue;
         end
+
+        fr = cord.processed_fr{row,col};
         
         xline = x_vec * fr;
         yline = y_vec * fr;
@@ -59,11 +59,11 @@ for row = 1:len_r
         ylines = [ylines; yline];
         zlines = [zlines; zline];
 
-        base_label = [tt{row} '_' bt{col}];
+        base_label = [params.ana_tt{id1} '_' params.ana_bt{id2}];
         label = repmat({base_label}, num_repeats, 1);
         lineLabels = [lineLabels; label];
 
-        base_color = colors(row, col, :);
+        base_color = colors(id1, id2, :);
         color = repmat(base_color, num_repeats, 1);
         lineColors = [lineColors; color];
         
@@ -115,3 +115,4 @@ plot3D_2(xlines, ylines, zlines, lineColors, lineLabels, params);
 %     plot3D(vecs, tnames, bname, cord, params, 1);
 % 
 % end
+

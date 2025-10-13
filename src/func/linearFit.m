@@ -6,15 +6,17 @@ function cord = linearFit(cord, params)
     % fr: N_units * (N_times / 5) * (5 * N_conditions)
     fr = reshape(fr,size(fr,1),params.len_sub_trial, []);
 
-    len_r = numel(cord.trial_types);
-    len_c = numel(cord.behavior_types);
+    len_r = numel(params.ana_tt);
+    len_c = numel(params.ana_bt);
 
     % var_matrix: (5 * N_conditions) * 3 var
     % position (1 to 5), choice (1 or -1), cross fig (1 or -1)
     var_matrix = zeros(size(fr,3),3);
     sum_idx = 0;
-    for row = 1:len_r
-        for col = 1:len_c
+    for id1 = 1:len_r
+        for id2 = 1:len_c
+            row = params.(params.ana_tt{id1});
+            col = params.(params.ana_bt{id2});
             if isempty(cord.processed_fr{row,col})
                 continue;
             end

@@ -17,14 +17,20 @@ function cords = loadData(params)
             trial_types{i} = strtrim(simple_type(i,:));
         end
         cord.trial_types = trial_types;
-        cord.behavior_types = {'correct'};
+        cord.behavior_types = {'correct', 'false', 'miss'};
 
-        for row = numel(cord.trial_types)
-            for col = numel(cord.behavior_types)
+        for id1 = 1:numel(params.ana_tt)
+            for id2 = 1:numel(params.ana_bt)
+                row = params.(params.ana_tt{id1});
+                col = params.(params.ana_bt{id2});
                 if ~isempty(cord.simple_firing{row, col})
                     cord.num_neurons = size(cord.simple_firing{row, col},2);
                 end
             end
+        end
+
+        if cord.num_neurons == 0
+            error('Analyzed data could not be empty!');
         end
 
         cords{idx} = cord;
