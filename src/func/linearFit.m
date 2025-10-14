@@ -2,7 +2,7 @@ function cord = linearFit(cord, params)
 
     % reconstruct the matrix
     % fr: N_units * (N_times *N_conditions)
-    fr = cord.units_fr_sum;
+    fr = cord.ana_fr_sum;
     % fr: N_units * (N_times / 5) * (5 * N_conditions)
     fr = reshape(fr,size(fr,1),params.len_sub_trial, []);
 
@@ -20,8 +20,8 @@ function cord = linearFit(cord, params)
             if isempty(cord.processed_fr{row,col})
                 continue;
             end
-            trial_type = cord.trial_types{row};
-            behavior_type = cord.behavior_types{col};
+            trial_type = params.tt{row};
+            behavior_type = params.bt{col};
 
             var_unit = zeros(5, 3);
             switch trial_type

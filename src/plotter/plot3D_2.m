@@ -1,7 +1,6 @@
 function plot3D_2(x_lines, y_lines, z_lines, lineColors, lineLabels, params)
 
-    num_lines = size(x_lines,1);
-    T = size(x_lines, 2);
+    num_lines = numel(x_lines);
     marker = 'o';
     markerCount = 25;
     markerSize  = 36;
@@ -16,10 +15,11 @@ function plot3D_2(x_lines, y_lines, z_lines, lineColors, lineLabels, params)
 
     for idx = 1:num_lines
 
-        xi = x_lines(idx,:); yi = y_lines(idx,:); zi = z_lines(idx,:);
+        xi = x_lines{idx}; yi = y_lines{idx}; zi = z_lines{idx};
+        T = numel(xi);
         mkIdx = unique(round(linspace(1, T, min(T, markerCount))));
 
-        color = lineColors(idx, :);
+        color = lineColors{idx};
 
         h = plot3(xi, yi, zi, ...
             '-', 'Color', color, 'LineWidth', 1.5);
@@ -42,7 +42,7 @@ function plot3D_2(x_lines, y_lines, z_lines, lineColors, lineLabels, params)
 
     end
 
-    legend(legendHandles, uniqueLabels, 'Interpreter','none');
+    legend(legendHandles, uniqueLabels, 'Interpreter','none', 'FontSize', 8);
 
 end
 

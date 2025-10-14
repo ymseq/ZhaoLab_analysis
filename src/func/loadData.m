@@ -8,16 +8,11 @@ function cords = loadData(params)
     for idx = 1:num_files
         
         data_file = fullfile(params.data_path,files(idx).name);
-        load(data_file, 'zones', 'simple_type', 'simple_firing');
+        load(data_file, 'zones', 'simple_firing', 'pos_lick_type');
 
         cord.zones = zones;
         cord.simple_firing = simple_firing;
-        trial_types = cell(size(simple_type,1),1);
-        for i = 1:numel(trial_types)
-            trial_types{i} = strtrim(simple_type(i,:));
-        end
-        cord.trial_types = trial_types;
-        cord.behavior_types = {'correct', 'false', 'miss'};
+        cord.pos_lick_type = pos_lick_type;
 
         for id1 = 1:numel(params.ana_tt)
             for id2 = 1:numel(params.ana_bt)

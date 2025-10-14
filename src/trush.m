@@ -1,175 +1,245 @@
-%%
-clc;
-clear;
-addpath(genpath('./src'));
-set(0, 'DefaultFigureVisible', 'on');
+function cord = limitProcess(cord, params)
+% only take the analyzed trials, then average within repeat trial first, 
+% then do gaussian smooth and normalize
 
-%%
-data_file = 'data/RA02-PFC.mat';
+    len_r = numel(params.ana_tt);
+    len_c = numel(params.ana_bt);
 
-load(data_file, 'zones', 'simple_type', 'simple_firing', 'count_good')
-count_good = count_good - 1;
-cord = struct();
+    ana_fr = cell(numel(params.tt), numel(params.bt));
 
-NUM_TIMES = 3100;
-SPACE_UNIT = 0.1;
+    num_ana_fr_sum = 0;
 
-trial_type = cell(size(simple_type,1),1);
-behavior_type = {'correct', 'false', 'miss'};
+    for id1 = 1:len_r
+        for id2 = 1:len_c
+            row = params.(params.ana_tt{id1});
+            col = params.(params.ana_bt{id2});
+            if isempty(cord.simple_firing{row,col})
+                continue;
+            end
 
-for i = 1:numel(trial_type)
-    trial_type{i} = strtrim(simple_type(i,:));
-end
+            % average within conditions
+            fr = cord.simple_firing{row,col};
+            fr = mean(fr,3);
+            fr = squeeze(fr);
 
-for row = 1:numel(trial_type)
-    for col = 1:numel(behavior_type)
+            % gaussian kernel smoothing
+            kernel = fspecial('gaussian', [1, params.gaussian_range], params.gaussian_sigma);
+            for i = 1:size(fr,1)
+                fr(i, :) = conv(fr(i, :), kernel, 'same');
+            end
 
-        if ~isempty(simple_firing{row,col})
-            fr_4d = simple_firing{row,col};
-            fr_4d = fr_4d(1,:,:,1:NUM_TIMES);
-            fr_4d = reshape(fr_4d,size(fr_4d,2),size(fr_4d,3),size(fr_4d,4));
-            cord.(trial_type{row}).(behavior_type{col}).fr = fr_4d;
-            cord.(trial_type{row}).(behavior_type{col}).num_trails = size(fr_4d,2);
+            % clip
+            fr = fr(:,params.left_boundary_idx:params.right_boundary_idx);
+
+            ana_fr{row,col} = fr;
+
+            % cal whole fr of units
+            num_ana_fr_sum = num_ana_fr_sum + size(fr,2);
         end
-
     end
-end
 
+    ana_fr_sum = zeros(cord.num_neurons, num_ana_fr_sum);
 
-%%
+    sum_idx = 0;
+    for id1 = 1:len_r
+        for id2 = 1:len_c
+            row = params.(params.ana_tt{id1});
+            col = params.(params.ana_bt{id2});
+            if isempty(ana_fr{row,col})
+                continue;
+            end
 
-at = {'pattern_1','pattern_2','pattern_3', ...
-      'position_1','position_2','position_3'};
-ab = {'correct'};
-
-total_trials = 0;
-
-for i = 1:numel(at)
-    for j = 1:numel(ab)
-        total_trials = total_trials + cord.(at{i}).(ab{j}).num_trails;
-    end
-end
-
-
-packed_fr = zeros(count_good,total_trials * NUM_TIMES);
-
-idx = 0;
-mean_group_fr = zeros(numel(at),numel(ab),count_good,NUM_TIMES);
-
-for i = 1:numel(at)
-    for j = 1:numel(ab)
-        plus = cord.(at{i}).(ab{j}).num_trails * NUM_TIMES;
-        packed_fr(:,idx+1:idx+plus) = reshape(cord.(at{i}).(ab{j}).fr, count_good, plus);
-        idx = idx+plus;
-        mean_group_fr(i,j,:,:) = mean(cord.(at{i}).(ab{j}).fr,2);
-    end
-end
-
-packed_fr = permute(packed_fr,[2,1]);
-
-
-%%
-
-[coeff, score, latent, tsquared, explained, mu] = pca(packed_fr);
-
-
-
-%%
-plot_3d_projection(mean_group_fr, at, ab, coeff);
-
-
-%%
-
-function plot_3d_projection(mean_group_fr, at, ab, coeff)
-
-    pc_vectors = coeff(:, 1:3);
-    pc_vectors = permute(pc_vectors, [2,1]);
-
-    colors = hsv(numel(at) * numel(ab));
-    labels = cell(numel(at) * numel(ab),1);
-
-    for i = 1:numel(at)
-        for j = 1:numel(ab)
-
-            figure;
-            view(3);
-            hold on;
-
-            idx = j * (i - 1) + j;
-            labels{idx} = [at{i},'_',ab{j}];
-
-            fr = mean_group_fr(i,j,:,:);
-            fr = squeeze(fr);
-            time_window = 50;
-            num_times = size(fr,2) / time_window;
-            fr = mean(reshape(fr, [], time_window, num_times), 2);
-            fr = squeeze(fr);
-            pj = pc_vectors * fr;
-            
-            group_colors = repmat(colors(idx, :), num_times, 1);
-            color_weights = linspace(0.3, 1, num_times)';
-            group_colors = group_colors .* color_weights;
-            
-            plot3(pj(1,:), pj(2,:), pj(3,:), '-o', 'LineWidth', 0.5, 'MarkerSize', 6, 'Color', group_colors(1,:));
-            scatter3(pj(1,:), pj(2,:), pj(3,:), 20, group_colors, 'filled');
-
-            group_colors(1,:)
-
-            title('Time Progression of the First 3 Principal Components');
-            xlabel('PC1');
-            ylabel('PC2');
-            zlabel('PC3');
-        
-            hold off;
+            fr = ana_fr{row,col};
+            plus = params.len_trial;
+            ana_fr_sum(:,(sum_idx + 1):(sum_idx + plus)) = fr;
+            sum_idx = sum_idx + plus;
 
         end
     end
-   
 
+    mean_units = mean(ana_fr_sum, 2);
+    std_units = std(ana_fr_sum, 0, 2);
+
+    ana_fr_sum = (ana_fr_sum - mean_units) ./ std_units;
+
+    for id1 = 1:len_r
+        for id2 = 1:len_c
+            row = params.(params.ana_tt{id1});
+            col = params.(params.ana_bt{id2});
+            if isempty(ana_fr{row,col})
+                continue;
+            end
+            ana_fr{row,col} = (ana_fr{row,col} - mean_units) ./ std_units;
+        end
+    end
+
+    cord.ana_fr = ana_fr;
+    cord.ana_fr_sum = ana_fr_sum;
+    
 end
 
 
 
+function cord = preprocessFr(cord,params)
 
-%%
-function plot_explained_variance(explained)
+    rows = cellfun(@(f) params.(f), params.tt);
+    cols = cellfun(@(f) params.(f), params.bt);
+
+    processed_fr = cell(numel(params.tt), numel(params.bt));
+
+    g1d = fspecial('gaussian', [1 params.gaussian_range], params.gaussian_sigma);  % 1 x K
+    g3d = reshape(g1d, 1, 1, []);  % 1 x 1 x K
+
+    blocks = {};
+    blocks_idx = 1;
+
+    for r = rows
+        for c = cols
+            fr = cord.simple_firing{r, c};
+            if isempty(fr), continue; end
     
-    % Select the first 50 components (or fewer if there are less than 50)
-    num_components = min(50, length(explained));
-    explained_50 = explained(1:num_components);
+            % [N x Trials x len_total]
+            fr = reshape(fr,size(fr,2),size(fr,3),size(fr,4));
     
-    % Plot the explained variance as a line chart
-    figure;
-    plot(1:num_components, explained_50, '-o', 'LineWidth', 2);
+            % gaussian smooth
+            fr = convn(fr, g3d, 'same');
     
-    % Title and labels
-    title('Explained Variance by the First 50 Principal Components');
-    xlabel('Principal Components');
-    ylabel('Explained Variance (%)');
-    grid on;
+            % clip, [N x Trials x len_trial]
+            fr = fr(:, :, params.left_boundary_idx : params.right_boundary_idx);
     
-    % Display a grid and adjust line style
-    set(gca, 'FontSize', 12);
+            processed_fr{r,c} = fr;
+    
+            % flatten
+            fr_block = reshape(fr, size(fr,1), []);
+            blocks{blocks_idx} = fr_block;
+            blocks_idx = blocks_idx + 1;
+        end
+    end
+
+    fr_sum = [blocks{:}];
+
+    mu  = mean(fr_sum, 2);
+    sg  = std(fr_sum, 0, 2);
+    sg  = max(sg, eps);
+    
+    mu3 = reshape(mu, [], 1, 1);
+    sg3 = reshape(sg, [], 1, 1);
+    
+    mask = ~cellfun('isempty', processed_fr);
+    processed_fr(mask) = cellfun(@(x) (x - mu3) ./ sg3, processed_fr(mask), ...
+                                 'UniformOutput', false);
+
+    cord.processed_fr = processed_fr;
+
 end
 
+function cord = linearFit(cord, params)
 
+    % reconstruct the matrix
+    % fr: N_units * (N_times *N_conditions)
+    fr = cord.ana_fr_sum;
+    % fr: N_units * (N_times / 5) * (5 * N_conditions)
+    fr = reshape(fr,size(fr,1),params.len_sub_trial, []);
 
+    len_r = numel(params.ana_tt);
+    len_c = numel(params.ana_bt);
 
+    % var_matrix: (5 * N_conditions) * 3 var
+    % position (1 to 5), choice (1 or -1), cross fig (1 or -1)
+    var_matrix = zeros(size(fr,3),3);
+    sum_idx = 0;
+    for id1 = 1:len_r
+        for id2 = 1:len_c
+            row = params.(params.ana_tt{id1});
+            col = params.(params.ana_bt{id2});
+            if isempty(cord.processed_fr{row,col})
+                continue;
+            end
+            trial_type = params.tt{row};
+            behavior_type = params.bt{col};
 
+            var_unit = zeros(5, 3);
+            switch trial_type
+                case 'origin'
+                    var_unit(1,:) = [1,-1,-1];
+                    var_unit(2,:) = [2,-1,-1];
+                    var_unit(3,:) = [3,1,1];
+                    var_unit(4,:) = [4,-1,-1];
+                    var_unit(5,:) = [5,-1,-1];
+                case 'pattern_1'
+                    var_unit(1,:) = [1,1,1];
+                    var_unit(2,:) = [2,-1,-1];
+                    var_unit(3,:) = [3,-1,-1];
+                    var_unit(4,:) = [4,-1,-1];
+                    var_unit(5,:) = [5,-1,-1];
+                case 'pattern_2'
+                    var_unit(1,:) = [1,-1,-1];
+                    var_unit(2,:) = [2,-1,-1];
+                    var_unit(3,:) = [3,1,1];
+                    var_unit(4,:) = [4,-1,-1];
+                    var_unit(5,:) = [5,-1,-1];
+                case 'pattern_3'
+                    var_unit(1,:) = [1,-1,-1];
+                    var_unit(2,:) = [2,-1,-1];
+                    var_unit(3,:) = [3,-1,-1];
+                    var_unit(4,:) = [4,-1,-1];
+                    var_unit(5,:) = [5,1,1];
+                case 'position_1'
+                    var_unit(1,:) = [1,-1,1];
+                    var_unit(2,:) = [2,-1,-1];
+                    var_unit(3,:) = [3,1,-1];
+                    var_unit(4,:) = [4,-1,-1];
+                    var_unit(5,:) = [5,-1,-1];
+                case 'position_2'
+                    var_unit(1,:) = [1,-1,-1];
+                    var_unit(2,:) = [2,-1,-1];
+                    var_unit(3,:) = [3,1,1];
+                    var_unit(4,:) = [4,-1,-1];
+                    var_unit(5,:) = [5,-1,-1];
+                case 'position_3'
+                    var_unit(1,:) = [1,-1,-1];
+                    var_unit(2,:) = [2,-1,-1];
+                    var_unit(3,:) = [3,1,-1];
+                    var_unit(4,:) = [4,-1,-1];
+                    var_unit(5,:) = [5,-1,1];
+            end
 
+            var_matrix((sum_idx + 1):(sum_idx + 5),:) = var_unit;
 
+        end
+    end
 
+    var_matrix = [var_matrix, ones(size(var_matrix,1),1)];
 
+    betas = zeros(cord.num_neurons, params.len_sub_trial, size(var_matrix,2));
 
+    for i = 1:cord.num_neurons
+        for t = 1:params.len_sub_trial
+            y = squeeze(fr(i,t,:));
+            b = var_matrix \ y;
+            betas(i,t,:) = b;
+        end
+    end
 
+    betas = pagemtimes(cord.denoise_matrix, betas);
 
+    num_var = size(betas,3);
+    max_betas = zeros(cord.num_neurons, num_var);
+    for v = 1:num_var
+        norms = zeros(1, params.len_sub_trial);
+        for t = 1:params.len_sub_trial
+            vec = squeeze(betas(:,t,v));
+            norms(t) = norm(vec, 2);
+        end
+        [~, t_max] = max(norms);
+        max_betas(:,v) = betas(:,t_max,v);
+    end
+    [Q_matrix, ~] = qr(max_betas, 0);
+    
+    cord.betas = betas;
+    cord.Q_matrix = Q_matrix;
 
-
-
-
-
-
-
+end
 
 
 

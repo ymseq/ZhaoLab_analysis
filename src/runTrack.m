@@ -11,7 +11,7 @@ cords = loadData(params);
 
 
 cord = cords{1};
-cord = preprocessFr(cord, params);
+cord = alignTrack(cord, params);
 cord = pcaFit(cord, params);
 
 vecs = cord.pcs(:,1:3);
@@ -25,47 +25,39 @@ len_c = numel(params.ana_bt);
 colors = jet(len_r * len_c);
 colors = reshape(colors, len_r, len_c, 3);
 
-lineColors = [];
+lineColors = {};
 lineLabels = {};
-xlines = [];
-ylines = [];
-zlines = [];
+xlines = {};
+ylines = {};
+zlines = {};
 
 for id1 = 1:numel(params.ana_tt)
     for id2 = 1:numel(params.ana_bt)
         row = params.(params.ana_tt{id1});
         col = params.(params.ana_bt{id2});
-        if isempty(cord.processed_fr{row,col})
+        if isempty(cord.ana_fr{row,col})
             continue;
         end
 
-        fr = cord.processed_fr{row,col};
+        fr = cord.ana_fr{row,col};
         
         xline = x_vec * fr;
         yline = y_vec * fr;
         zline = z_vec * fr;
 
-        xline = reshape(xline, [], params.len_trial);
-        yline = reshape(yline, [], params.len_trial);
-        zline = reshape(zline, [], params.len_trial);
+        xline = reshape(xline, [], params.len_track);
+        yline = reshape(yline, [], params.len_track);
+        zline = reshape(zline, [], params.len_track);
 
-        xline = reshape(xline, [], params.len_trial);
-        yline = reshape(yline, [], params.len_trial);
-        zline = reshape(zline, [], params.len_trial);
+        xlines{end+1} = xline;
+        ylines{end+1} = yline;
+        zlines{end+1} = zline;
 
-        num_repeats = size(xline, 1);
+        label = [params.ana_tt{id1} '_' params.ana_bt{id2}];
+        lineLabels{end+1} = label;
 
-        xlines = [xlines; xline];
-        ylines = [ylines; yline];
-        zlines = [zlines; zline];
-
-        base_label = [params.ana_tt{id1} '_' params.ana_bt{id2}];
-        label = repmat({base_label}, num_repeats, 1);
-        lineLabels = [lineLabels; label];
-
-        base_color = colors(id1, id2, :);
-        color = repmat(base_color, num_repeats, 1);
-        lineColors = [lineColors; color];
+        color = colors(id1, id2, :);
+        lineColors{end+1} = color;
         
     end
 end
@@ -95,7 +87,7 @@ plot3D_2(xlines, ylines, zlines, lineColors, lineLabels, params);
 % for idx = 1:numel(cords)
 % 
 %     cord = cords{idx};
-%     cord = preprocessFr(cord, params);
+%     cord = limitprocess(cord, params);
 %     cord = pcaFit(cord, params);
 % 
 % 

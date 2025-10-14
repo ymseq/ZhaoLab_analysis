@@ -16,9 +16,9 @@ function plot3D_1(vecs, tnames, bname, cord, params)
 
     num_trial_type = numel(tnames);
     
-    x_lines = zeros(num_trial_type, params.len_trial);
-    y_lines = zeros(num_trial_type, params.len_trial);
-    z_lines = zeros(num_trial_type, params.len_trial);
+    x_lines = zeros(num_trial_type, params.len_track);
+    y_lines = zeros(num_trial_type, params.len_track);
+    z_lines = zeros(num_trial_type, params.len_track);
 
     x_vec = reshape(vecs(:,1),1,[]);
     y_vec = reshape(vecs(:,2),1,[]);
@@ -109,9 +109,9 @@ function plot3D_2(vecs, tnames, bname, cord, params)
 
     num_trial_type = numel(tnames);
     
-    x_lines = zeros(num_trial_type, params.len_trial);
-    y_lines = zeros(num_trial_type, params.len_trial);
-    z_lines = zeros(num_trial_type, params.len_trial);
+    x_lines = zeros(num_trial_type, params.len_track);
+    y_lines = zeros(num_trial_type, params.len_track);
+    z_lines = zeros(num_trial_type, params.len_track);
 
     x_vec = reshape(vecs(:,1),1,numel(vecs(:,1)));
     y_vec = reshape(vecs(:,2),1,numel(vecs(:,2)));
@@ -177,7 +177,7 @@ function plot3D_2(vecs, tnames, bname, cord, params)
             for seg = 1:segments
                 l = (seg - 1) * params.len_sub_trial + 1;
                 r = (seg) * params.len_sub_trial + 1;
-                r = min(r,params.len_trial);
+                r = min(r,params.len_track);
                 plot3(xi(l:r), yi(l:r), zi(l:r), ...
                     '-', 'Color', timeColors(seg, :), 'LineWidth', 1.5);
             end
