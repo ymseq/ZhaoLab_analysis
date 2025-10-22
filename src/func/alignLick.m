@@ -2,9 +2,6 @@ function cord = alignLick(cord, params)
 
     %% preprocess whole data
 
-    len_r = numel(params.ana_tt);
-    len_c = numel(params.ana_bt);
-
     rows = cellfun(@(f) params.(f), params.tt);
     cols = cellfun(@(f) params.(f), params.bt);
 
@@ -66,8 +63,10 @@ function cord = alignLick(cord, params)
 
                 end
 
-                sub_fr_lick = sub_fr_trials(:, is_lick_trials == 1, :);
-                sub_fr_nonlick = sub_fr_trials(:, is_lick_trials == 0, :);
+                mask_lick = is_lick_trials == 1;
+                mask_nonlick = is_lick_trials == 0;
+                sub_fr_lick = sub_fr_trials(:, mask_lick, :);
+                sub_fr_nonlick = sub_fr_trials(:, mask_nonlick, :);
 
                 if ~isempty(sub_fr_lick)
                     mean_fr_lick = squeeze(mean(sub_fr_lick, 2));
@@ -107,6 +106,9 @@ function cord = alignLick(cord, params)
                                  'UniformOutput', false);
 
     %% extract the data to analyze
+
+    rows = cellfun(@(f) params.(f), params.ana_tt);
+    cols = cellfun(@(f) params.(f), params.ana_bt);
 
     [R, C, S, L] = ndgrid(rows, cols, 1:params.num_sub_type, 1:params.num_lick_type);
     combinations = [R(:), C(:), S(:), L(:)];
